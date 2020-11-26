@@ -3,21 +3,35 @@ from inspect import signature
 import numpy as np
 import os
 try:
-  import pyopencl as cl
+  import pyopencl as cl # pyopencl 科学计算库
   GPU = True
 except ImportError:
   # no GPU support
   GPU = False
+  
+# **** Python中带下划线的变量和方法总结 —— https://blog.csdn.net/tcx1992/article/details/80105645 ****
+# **** 1、单前导下划线 _var ：非强制约定该变量或方法仅内部使用（私有）。****
+# **** 2、单末尾下划线 var_ ：避免与关键字的命名冲突。****
+# **** 3、双前导下划线 __var ：导致Python解释器重写属性名称，以避免子类中的命名冲突， 防止变量（方法）在子类中被重写。****
+# **** 4、双前导和双末尾下划线 _var_ ：不会采用名称修饰，用于特殊用途，不建议使用。例子有：，__init__对象构造函数，或__call__，它使得一个对象可以被调用。 ****
+# **** 5、 单下划线 _ ： 表示无关紧要的、临时的变量。 ****
 
 # **** profiler, 10 lines too long ****
 DEBUG = os.getenv("DEBUG", None) is not None
 if DEBUG:
   import collections, atexit, time
+  # defaultdict()中参数为字典value的类型
   debug_counts = collections.defaultdict(int)
   debug_times = collections.defaultdict(float)
   def print_debug_exit():
+    # sorted方法 第一个参数：可迭代对象 第二个参数：排序的属性 第三个参数：排序规则，reverse是否降序
+    # 这里取倒序
     for name, _ in sorted(debug_times.items(), key=lambda x: -x[1]):
       print("%20s : %3d  %10.2f ms" % (name, debug_counts[name], debug_times[name]))
+  # python atexit 模块定义了一个 register 函数，用于在 python 解释器中注册一个退出函数，这个函数在解释器正常终止时自动执行,一般用来做一些资源清理的操作。 
+  # atexit 按注册的相反顺序执行这些函数; 例如注册A、B、C，在解释器终止时按顺序C，B，A运行。
+  # Note：如果程序是非正常crash，或者通过os._exit()退出，注册的退出函数将不会被调用。
+  # print_debug_exit 即为注册的退出函数
   atexit.register(print_debug_exit)
 
 class ProfileOp:
@@ -82,10 +96,12 @@ class Tensor:
   def assign(self, x):
     self.data = x.data
 
+  #将类方法转为类属性
   @property
   def shape(self):
     return self.data.shape
 
+  # 参数前加*号，其类型为元组
   @staticmethod
   def zeros(*shape):
     return Tensor(np.zeros(shape, dtype=np.float32))
