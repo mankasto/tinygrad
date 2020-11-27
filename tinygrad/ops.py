@@ -2,15 +2,20 @@ import sys
 import warnings
 import numpy as np
 from .tensor import Function, register
+'''
+  算子实现及注册
+'''
 
 # ************* basic ops *************
 def unbroadcast(out, in_sh):
   # adjoint operation to broadcast is sum. Need to sum all axis with 1 = in_sh[i] < out.shape[i]
+  # 调整维度，在out大于1但对应的in_sh等于1的维度上求和
   sum_axis = [i for i in range(len(in_sh)) if in_sh[i]==1 and out.shape[i]>1]
   return out.sum(axis=tuple(sum_axis)).reshape(in_sh)
 
 class Add(Function):
   @staticmethod
+  # ctx 上下文字典
   def forward(ctx, x, y):
     ctx.save_for_backward(x.shape, y.shape)
     return x+y
