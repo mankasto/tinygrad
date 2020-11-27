@@ -225,6 +225,7 @@ class Function:
 
   def apply(self, *x, **kwargs):
     op = self
+    # x——tensors,tensor列表
     ctx = op(*x)
     # use default params
     params = signature(op.forward).parameters
@@ -239,7 +240,7 @@ class Function:
     ret._ctx = ctx
     return ret
 
-# 注册函数
+# 注册函数,fxn函数
 def register(name, fxn, gpu=False):
   if gpu:
     # Tensor指文件名，opsgpu和ops是全局变量，字典
