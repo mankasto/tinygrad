@@ -218,7 +218,8 @@ class Function:
   def __init__(self, *tensors):
     self.parents = tensors
     self.saved_tensors = []
-
+    
+  # 保存x到saved_tensors列表中
   def save_for_backward(self, *x):
     self.saved_tensors.extend(x)
 
@@ -238,8 +239,10 @@ class Function:
     ret._ctx = ctx
     return ret
 
+# 注册函数
 def register(name, fxn, gpu=False):
   if gpu:
+    # Tensor指文件名，opsgpu和ops是全局变量，字典
     Tensor.opsgpu[name] = fxn
   else:
     Tensor.ops[name] = fxn
