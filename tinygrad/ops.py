@@ -15,7 +15,7 @@ def unbroadcast(out, in_sh):
 
 class Add(Function):
   @staticmethod
-  # ctx 上下文字典
+  # ctx是一个Function
   def forward(ctx, x, y):
     ctx.save_for_backward(x.shape, y.shape)
     return x+y
