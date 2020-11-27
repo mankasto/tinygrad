@@ -3,7 +3,7 @@ from inspect import signature
 import numpy as np
 import os
 try:
-  import pyopencl as cl # pyopencl 科学计算库
+  import pyopencl as cl # pyopencl 科学计算库，gpu加速
   GPU = True
 except ImportError:
   # no GPU support
@@ -48,6 +48,7 @@ class ProfileOp:
       print("%20s : %7.2f ms  %s" % (self.name, et, [y.shape for y in self.x]))
 
 cl_ctx, cl_queue = None, None
+# gpu初始化
 def require_init_gpu():
   global cl_ctx, cl_queue
   if cl_queue is None:
@@ -64,6 +65,7 @@ class Tensor:
   did_float_warning = False
   default_gpu = False
 
+  # 属性（成员变量）：gpu、data、grad、_ctx
   def __init__(self, data, gpu=None):
     if gpu is None:
       gpu = Tensor.default_gpu
@@ -82,12 +84,14 @@ class Tensor:
       self.gpu = False
 
     self.data = data
+    # grad是Tensor
     self.grad = None
 
     if gpu:
       self.cuda_()
 
     # internal variables used for autograd graph construction
+    # Tensor列表
     self._ctx = None
 
   def __repr__(self):
@@ -118,17 +122,20 @@ class Tensor:
   def eye(dim):
     return Tensor(np.eye(dim).astype(np.float32))
 
+  # 反向传播
   def backward(self, allow_fill=True):
     if self._ctx is None:
       return
 
     if self.grad is None and allow_fill:
       # fill in the first grad with one
-      # this is "implicit gradient creation"
+      # this is "implicit gradient creation" 隐式梯度构造
       assert self.data.shape == (1,)
       self.grad = Tensor(np.ones(self.data.shape, dtype=self.data.dtype), gpu=self.gpu)
-
+    
+    # nodes是一个Tensor列表，node为Tensor
     visited, nodes = set(), []
+    # 递归访问
     def deepwalk(node):
       visited.add(node)
       if node._ctx:
@@ -154,6 +161,7 @@ class Tensor:
   # ***** tinygrad supports CPU and GPU *****
 
   def cpu(self):
+    # 若原始设置在gpu上则需要迁移修改至cpu,否则不变
     if self.gpu:
       ret = Tensor(np.empty(self.shape, dtype=np.float32), gpu=False)
       cl.enqueue_copy(cl_queue, ret.data, self.data)
@@ -164,10 +172,12 @@ class Tensor:
       return self
 
   def cuda_(self):
+    # 将数据迁移到gpu上
     self.data = self.cuda().data
     self.gpu = True
 
   def cuda(self):
+    # 若原始设置在cpu上，则需要迁移修改，否则不变
     if not GPU:
       raise Exception("No GPU Support, install pyopencl")
     if not self.gpu:
@@ -243,7 +253,7 @@ class Function:
 # 注册函数,fxn函数
 def register(name, fxn, gpu=False):
   if gpu:
-    # Tensor指文件名，opsgpu和ops是全局变量，字典
+    # opsgpu和ops字典
     Tensor.opsgpu[name] = fxn
   else:
     Tensor.ops[name] = fxn
